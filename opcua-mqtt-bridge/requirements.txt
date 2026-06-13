@@ -1,0 +1,5 @@
+# Factory Assistant — OPC UA → MQTT bridge runtime dependencies (READ-ONLY).
+# Pinned for reproducible add-on builds.
+asyncua==1.1.5
+paho-mqtt==1.6.1
+PyYAML==6.0.2

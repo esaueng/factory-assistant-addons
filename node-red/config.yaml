@@ -1,0 +1,42 @@
+# Factory Assistant — Node-RED (optional protocol glue, READ-ONLY posture).
+#
+# Standard Home Assistant add-on config schema (kept unchanged for
+# Supervisor/community compatibility). This add-on wraps Node-RED as an
+# OPTIONAL protocol-glue / flow tool. On this appliance it must be used with a
+# READ-ONLY default posture: flows may read/transform/visualize telemetry but
+# must NOT be wired to control machines. See DOCS.md and the Factory Assistant
+# safety boundary.
+---
+name: Node-RED (read-only flow tool)
+version: "0.1.0"
+slug: node_red
+description: >-
+  Optional Node-RED flow/protocol-glue tool for Factory Assistant, wrapping the
+  community Node-RED add-on with a read-only default posture. For reading and
+  transforming telemetry only — must not be used for machine control.
+url: "https://github.com/esaueng/factory-assistant-addons/tree/main/node-red"
+arch:
+  - amd64
+  - aarch64
+  - armv7
+init: false
+startup: services
+boot: manual
+# Ships disabled-at-boot (boot: manual) and with no host network / hardware so
+# it cannot reach machine I/O out of the box. Operators enable it deliberately
+# for read-only flow work.
+host_network: false
+hassio_api: false
+homeassistant_api: false
+ingress: true
+ingress_port: 1880
+ports:
+  1880/tcp: null
+options:
+  log_level: info
+  read_only_posture: true
+  credential_secret: ""
+schema:
+  log_level: list(trace|debug|info|notice|warning|error|fatal)
+  read_only_posture: bool
+  credential_secret: password?

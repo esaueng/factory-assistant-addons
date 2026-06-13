@@ -1,0 +1,35 @@
+Factory Assistant Add-ons
+Copyright 2026 Factory Assistant contributors
+
+Licensed under the Apache License, Version 2.0.
+
+Factory Assistant is based on Home Assistant.
+
+This repository provides industrial monitoring add-ons for Factory Assistant,
+built to run on the Home Assistant Supervisor / add-on platform developed by
+the Home Assistant project (https://www.home-assistant.io/), licensed under
+the Apache License, Version 2.0. The Home Assistant add-on contract (the
+`config.yaml` schema and the add-on base images this repository builds FROM)
+is used unchanged so that community add-ons remain compatible.
+
+"Home Assistant" and the Home Assistant logo are trademarks of their
+respective owners (the Home Assistant project / Open Home Foundation). The
+name is used here solely for factual attribution of origin, as permitted for
+describing the origin of the Work. Factory Assistant is an independent project
+and is not affiliated with or endorsed by the Home Assistant project, the Open
+Home Foundation, or Nabu Casa, Inc.
+
+These add-ons are monitoring tools and are READ-ONLY by default. They must not
+be configured or relied upon for machine control, emergency stop, interlock,
+or any safety-rated function. See the Factory Assistant safety boundary
+(docs/SAFETY_BOUNDARY.md in the factory-assistant OS repository).
+
+Individual add-ons bundle third-party open source components under their own
+licenses, retained in the corresponding container images and source trees:
+
+  - opcua-mqtt-bridge: asyncua (LGPL-3.0), paho-mqtt (EPL-2.0 / EDL-1.0),
+    PyYAML (MIT), and the Home Assistant add-on base image.
+  - historian: the InfluxDB / Telegraf client tooling referenced in DOCS.md,
+    each under its own upstream license.
+  - node-red: wraps the community Node-RED add-on and the Node-RED project
+    (Apache-2.0), which carry their own NOTICE/attribution.

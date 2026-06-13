@@ -1,0 +1,59 @@
+# Factory Assistant — Historian (long-term telemetry exporter).
+#
+# Standard Home Assistant add-on config schema (kept unchanged for
+# Supervisor/community compatibility). This add-on READS telemetry from MQTT
+# (and/or Home Assistant) and WRITES it to a time-series database for long-term
+# storage. Writing to a database is NOT a machine-control path; it is data
+# archival. This add-on never writes to a PLC/OPC UA server or any machine I/O.
+# See DOCS.md and the Factory Assistant safety boundary.
+---
+name: Historian (telemetry → TSDB)
+version: "0.1.0"
+slug: historian
+description: >-
+  Long-term telemetry exporter: read measurements from MQTT (fa/#) and write
+  them to a time-series database (InfluxDB or TimescaleDB) for trending and
+  retention. Reads telemetry, writes to a database — no machine control.
+url: "https://github.com/esaueng/factory-assistant-addons/tree/main/historian"
+arch:
+  - amd64
+  - aarch64
+  - armv7
+init: false
+startup: services
+boot: auto
+host_network: false
+hassio_api: false
+homeassistant_api: false
+services:
+  - mqtt:need
+options:
+  log_level: info
+  source:
+    mqtt_host: "core-mosquitto"
+    mqtt_port: 1883
+    mqtt_username: ""
+    mqtt_password: ""
+    topic_filter: "fa/#"
+  tsdb:
+    type: "influxdb"
+    url: "http://a0d7b954-influxdb:8086"
+    influx_org: "factory-assistant"
+    influx_bucket: "telemetry"
+    influx_token: ""
+    measurement: "fa_telemetry"
+schema:
+  log_level: list(trace|debug|info|notice|warning|error|fatal)
+  source:
+    mqtt_host: str
+    mqtt_port: port
+    mqtt_username: str?
+    mqtt_password: password?
+    topic_filter: str
+  tsdb:
+    type: list(influxdb|timescaledb)
+    url: url
+    influx_org: str?
+    influx_bucket: str?
+    influx_token: password?
+    measurement: str

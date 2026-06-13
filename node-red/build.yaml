@@ -1,0 +1,15 @@
+# Factory Assistant — Node-RED add-on build configuration.
+#
+# Standard Home Assistant add-on build.yaml: maps each architecture to the
+# base image the Supervisor passes as the BUILD_FROM build-arg. Here we wrap the
+# community Node-RED add-on image per architecture so the Node-RED runtime is
+# inherited unchanged and only the Factory Assistant read-only posture layer is
+# added (see Dockerfile).
+---
+build_from:
+  amd64: ghcr.io/hassio-addons/node-red/amd64:latest
+  aarch64: ghcr.io/hassio-addons/node-red/aarch64:latest
+  armv7: ghcr.io/hassio-addons/node-red/armv7:latest
+labels:
+  org.opencontainers.image.title: "Factory Assistant Node-RED (read-only)"
+  org.opencontainers.image.licenses: "Apache-2.0"

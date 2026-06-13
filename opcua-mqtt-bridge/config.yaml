@@ -1,0 +1,86 @@
+# Factory Assistant — OPC UA → MQTT bridge (READ-ONLY).
+#
+# Standard Home Assistant add-on config schema (kept unchanged for
+# Supervisor/community compatibility). This add-on SUBSCRIBES to a curated set
+# of OPC UA nodes and republishes their values to MQTT. It NEVER writes to the
+# OPC UA server — read/subscribe only is a structural safety boundary, not an
+# option. See DOCS.md and the Factory Assistant safety boundary.
+---
+name: OPC UA → MQTT Bridge (read-only)
+version: "0.1.0"
+slug: opcua_mqtt_bridge
+description: >-
+  Read-only OPC UA to MQTT bridge: subscribe to curated OPC UA nodes and
+  republish values to MQTT (fa/<site>/<area>/<device>/<measurement>) with HA
+  MQTT discovery. Subscribe-only — no OPC UA writes, ever.
+url: "https://github.com/esaueng/factory-assistant-addons/tree/main/opcua-mqtt-bridge"
+arch:
+  - amd64
+  - aarch64
+  - armv7
+init: false
+startup: application
+boot: auto
+# This add-on needs no Supervisor capabilities beyond outbound network access
+# (OPC UA server + MQTT broker). It requests no hardware, no host network, no
+# privileged mode, and no Supervisor API roles — it cannot reach machine I/O.
+host_network: false
+hassio_api: false
+homeassistant_api: false
+options:
+  log_level: info
+  opcua:
+    endpoint: "opc.tcp://plc.example.local:4840"
+    security: "None"
+    username: ""
+    password: ""
+    publish_interval: 5.0
+  mqtt:
+    host: "core-mosquitto"
+    port: 1883
+    username: ""
+    password: ""
+    base_topic: "fa"
+    discovery_prefix: "homeassistant"
+    discovery: true
+  site: "plant1"
+  nodes:
+    - node_id: "ns=2;s=Line1.Press03.MotorTemp"
+      area: "line1"
+      device: "press03"
+      measurement: "motor_temp"
+      device_class: "temperature"
+      unit_of_measurement: "°C"
+      state_class: "measurement"
+    - node_id: "ns=2;s=Line2.Extr01.BarrelTemp"
+      area: "line2"
+      device: "extr01"
+      measurement: "barrel_temp"
+      device_class: "temperature"
+      unit_of_measurement: "°C"
+      state_class: "measurement"
+schema:
+  log_level: list(trace|debug|info|notice|warning|error|fatal)
+  opcua:
+    endpoint: url
+    security: list(None|Sign|SignAndEncrypt)?
+    username: str?
+    password: password?
+    publish_interval: float(0.5,3600.0)
+  mqtt:
+    host: str
+    port: port
+    username: str?
+    password: password?
+    base_topic: str
+    discovery_prefix: str
+    discovery: bool
+  site: str
+  nodes:
+    - node_id: str
+      area: str
+      device: str
+      measurement: str
+      device_class: str?
+      unit_of_measurement: str?
+      state_class: list(measurement|total|total_increasing)?

@@ -1,0 +1,4 @@
+# Factory Assistant — Historian exporter runtime dependencies.
+# The InfluxDB write path uses only the Python standard library (urllib);
+# paho-mqtt is the single third-party dependency.
+paho-mqtt==1.6.1

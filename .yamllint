@@ -1,0 +1,19 @@
+# yamllint configuration for Factory Assistant YAML (themes, dashboards,
+# packages, configuration.yaml, workflows). Run via `make lint`.
+#
+# These files are comment-heavy commissioning templates; line-length is
+# disabled rather than reflowing prose. Structural correctness is the point,
+# and `scripts/lint_yaml.py` additionally parses every file with the Home
+# Assistant custom-tag loader.
+extends: default
+
+rules:
+  line-length: disable
+  # Home Assistant dashboards routinely use "on"/"off" enum-ish values and
+  # GitHub Actions uses the `on:` key; don't flag truthy strings.
+  truthy:
+    allowed-values: ["true", "false", "on", "off"]
+    check-keys: false
+  comments:
+    min-spaces-from-content: 1
+  document-start: disable

@@ -1,0 +1,17 @@
+# Factory Assistant Add-ons — Home Assistant add-on repository descriptor.
+#
+# This file makes the repository installable from the Factory Assistant /
+# Home Assistant Supervisor UI: Settings -> Add-ons -> Add-on Store -> (top
+# right menu) -> Repositories -> add this repository's Git URL. The Supervisor
+# then discovers each add-on by the `config.yaml` in its subdirectory.
+#
+# The format is the standard Home Assistant add-on repository contract and is
+# kept unchanged so community add-ons remain compatible.
+#
+# SAFETY: every add-on in this repository is a READ-ONLY monitoring tool by
+# default. None provides machine control, write paths, e-stop, interlock, or
+# any safety function. See README.md and each add-on's DOCS.md.
+---
+name: Factory Assistant Add-ons
+url: "https://github.com/esaueng/factory-assistant-addons"
+maintainer: Factory Assistant contributors <addons@esaueng.com>

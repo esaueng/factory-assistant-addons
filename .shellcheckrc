@@ -1,0 +1,8 @@
+# ShellCheck configuration for the Factory Assistant overlay scripts.
+#
+# SC1091 (info) only reports that ShellCheck did not follow a `source`d file
+# (branding/identity.env, upstream.env) to analyze it — it never indicates a
+# bug in the script doing the sourcing. The sourced files are plain key=value
+# env files; disable the note so it doesn't fail the lint.
+disable=SC1091
+external-sources=true
