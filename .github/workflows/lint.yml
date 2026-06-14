@@ -12,12 +12,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Validate catalog contract
-        run: bash tests/test_catalog_alignment.sh
+        run: |
+          bash tests/test_catalog_alignment.sh
+          bash tests/test_image_publish_workflow.sh
 
       - name: Check shell syntax
         run: |
           bash -n \
             tests/test_catalog_alignment.sh \
+            tests/test_image_publish_workflow.sh \
             opcua-mqtt-bridge/run.sh \
             plc-gateway-helper/run.sh \
             historian-storage/run.sh \

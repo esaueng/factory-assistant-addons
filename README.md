@@ -50,10 +50,12 @@ add-on and in the header of every executable entrypoint.
 
 ## Validation
 
-Run the catalog contract check before publishing changes:
+Run the catalog and image-publication contract checks before publishing
+changes:
 
 ```sh
 bash tests/test_catalog_alignment.sh
+bash tests/test_image_publish_workflow.sh
 ```
 
 ## Topic and naming conventions
