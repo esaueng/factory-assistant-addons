@@ -14,10 +14,9 @@ description: >-
   registers and republish values to MQTT with discovery. Function codes 3/4
   only; no writes, coils, control paths, or safety controller use.
 url: "https://github.com/esaueng/factory-assistant-addons/tree/main/plc-gateway-helper"
+image: ghcr.io/esaueng/{arch}-addon-plc-gateway-helper
 arch:
   - amd64
-  - aarch64
-  - armv7
 init: false
 startup: services
 boot: manual

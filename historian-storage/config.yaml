@@ -16,10 +16,9 @@ description: >-
   retention. Reads telemetry, writes to a database — no machine control. Cloud
   export is disabled by default.
 url: "https://github.com/esaueng/factory-assistant-addons/tree/main/historian-storage"
+image: ghcr.io/esaueng/{arch}-addon-historian-storage
 arch:
   - amd64
-  - aarch64
-  - armv7
 init: false
 startup: services
 boot: manual

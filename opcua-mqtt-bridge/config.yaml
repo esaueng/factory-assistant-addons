@@ -14,10 +14,9 @@ description: >-
   republish values to MQTT (fa/<site>/<area>/<device>/<measurement>) with HA
   MQTT discovery. Subscribe-only — no OPC UA writes, ever.
 url: "https://github.com/esaueng/factory-assistant-addons/tree/main/opcua-mqtt-bridge"
+image: ghcr.io/esaueng/{arch}-addon-opcua-mqtt-bridge
 arch:
   - amd64
-  - aarch64
-  - armv7
 init: false
 startup: services
 boot: manual
