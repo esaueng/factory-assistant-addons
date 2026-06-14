@@ -1,4 +1,4 @@
-# Factory Assistant — Historian (telemetry → TSDB).
+# Factory Assistant — Historian Storage (telemetry → TSDB).
 #
 # FROM the official Home Assistant add-on base image (standard add-on
 # contract). BUILD_FROM is supplied per-architecture by the Supervisor; the
@@ -23,7 +23,7 @@ COPY run.sh /run.sh
 RUN chmod a+x /run.sh
 
 LABEL \
-  io.hass.name="Historian (telemetry → TSDB)" \
+  io.hass.name="Historian Storage (telemetry → TSDB)" \
   io.hass.description="Long-term telemetry exporter for Factory Assistant" \
   io.hass.type="addon" \
   io.hass.version="0.1.0"

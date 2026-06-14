@@ -1,0 +1,31 @@
+name: lint
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate catalog contract
+        run: bash tests/test_catalog_alignment.sh
+
+      - name: Check shell syntax
+        run: |
+          bash -n \
+            tests/test_catalog_alignment.sh \
+            opcua-mqtt-bridge/run.sh \
+            plc-gateway-helper/run.sh \
+            historian-storage/run.sh \
+            node-red/posture-banner.sh
+
+      - name: Check Python syntax
+        run: |
+          python3 -m py_compile \
+            opcua-mqtt-bridge/bridge.py \
+            plc-gateway-helper/gateway_helper.py \
+            historian-storage/exporter.py

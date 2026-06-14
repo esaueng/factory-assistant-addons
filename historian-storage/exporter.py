@@ -146,6 +146,7 @@ class InfluxWriter:
 def main() -> int:
     options = load_options()
     configure_logging(options.get("log_level", "info"))
+    cloud_export_enabled = bool(options.get("cloud_export_enabled", False))
     source = options["source"]
     tsdb = options["tsdb"]
 
@@ -159,8 +160,10 @@ def main() -> int:
 
     LOG.info(
         "Factory Assistant Historian starting: read MQTT %s, write to "
-        "InfluxDB (database archival only; no machine writes).",
+        "InfluxDB (database archival only; no machine writes). Cloud export "
+        "enabled: %s.",
         source.get("topic_filter", "fa/#"),
+        cloud_export_enabled,
     )
 
     writer = InfluxWriter(tsdb)

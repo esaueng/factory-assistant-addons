@@ -19,8 +19,8 @@ arch:
   - aarch64
   - armv7
 init: false
-startup: application
-boot: auto
+startup: services
+boot: manual
 # This add-on needs no Supervisor capabilities beyond outbound network access
 # (OPC UA server + MQTT broker). It requests no hardware, no host network, no
 # privileged mode, and no Supervisor API roles — it cannot reach machine I/O.
@@ -35,6 +35,7 @@ options:
     username: ""
     password: ""
     publish_interval: 5.0
+    write_nodes_allowed: false
   mqtt:
     host: "core-mosquitto"
     port: 1883
@@ -67,6 +68,7 @@ schema:
     username: str?
     password: password?
     publish_interval: float(0.5,3600.0)
+    write_nodes_allowed: bool
   mqtt:
     host: str
     port: port

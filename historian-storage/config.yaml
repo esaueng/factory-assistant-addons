@@ -7,21 +7,22 @@
 # archival. This add-on never writes to a PLC/OPC UA server or any machine I/O.
 # See DOCS.md and the Factory Assistant safety boundary.
 ---
-name: Historian (telemetry → TSDB)
+name: Historian Storage (telemetry → TSDB)
 version: "0.1.0"
-slug: historian
+slug: historian_storage
 description: >-
   Long-term telemetry exporter: read measurements from MQTT (fa/#) and write
   them to a time-series database (InfluxDB or TimescaleDB) for trending and
-  retention. Reads telemetry, writes to a database — no machine control.
-url: "https://github.com/esaueng/factory-assistant-addons/tree/main/historian"
+  retention. Reads telemetry, writes to a database — no machine control. Cloud
+  export is disabled by default.
+url: "https://github.com/esaueng/factory-assistant-addons/tree/main/historian-storage"
 arch:
   - amd64
   - aarch64
   - armv7
 init: false
 startup: services
-boot: auto
+boot: manual
 host_network: false
 hassio_api: false
 homeassistant_api: false
@@ -29,6 +30,7 @@ services:
   - mqtt:need
 options:
   log_level: info
+  cloud_export_enabled: false
   source:
     mqtt_host: "core-mosquitto"
     mqtt_port: 1883
@@ -44,6 +46,7 @@ options:
     measurement: "fa_telemetry"
 schema:
   log_level: list(trace|debug|info|notice|warning|error|fatal)
+  cloud_export_enabled: bool
   source:
     mqtt_host: str
     mqtt_port: port

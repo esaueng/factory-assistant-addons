@@ -16,7 +16,7 @@ Factory Assistant is based on Home Assistant.
 > safety boundary. Factory Assistant is a monitoring system, not a safety
 > device, and must never implement machine control, e-stop, interlocks, or any
 > safety-rated function. See the project safety boundary:
-> [`docs/SAFETY_BOUNDARY.md`](https://github.com/esaueng/factory-assistant/blob/main/docs/SAFETY_BOUNDARY.md).
+> [`docs/SAFETY_BOUNDARY.md`](https://github.com/esaueng/FactoryAssistantOS/blob/main/docs/SAFETY_BOUNDARY.md).
 
 ## What it does
 
@@ -32,6 +32,8 @@ Factory Assistant is based on Home Assistant.
 - No OPC UA writes, method calls, or attribute writes.
 - No MQTT command topics, no subscriptions that act on a device.
 - No host network, no hardware access, no Supervisor/Home Assistant API roles.
+- Ships `boot: manual`; operators deliberately start it after configuring a
+  read-only node list.
 
 ## Quick start
 
