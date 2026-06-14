@@ -29,7 +29,10 @@ licenses, retained in the corresponding container images and source trees:
 
   - opcua-mqtt-bridge: asyncua (LGPL-3.0), paho-mqtt (EPL-2.0 / EDL-1.0),
     PyYAML (MIT), and the Home Assistant add-on base image.
-  - historian: the InfluxDB / Telegraf client tooling referenced in DOCS.md,
-    each under its own upstream license.
+  - plc-gateway-helper: pymodbus (BSD-3-Clause), paho-mqtt (EPL-2.0 /
+    EDL-1.0), and the Home Assistant add-on base image.
+  - historian-storage: paho-mqtt (EPL-2.0 / EDL-1.0); the InfluxDB /
+    Telegraf client tooling referenced in DOCS.md carries its own upstream
+    license.
   - node-red: wraps the community Node-RED add-on and the Node-RED project
     (Apache-2.0), which carry their own NOTICE/attribution.

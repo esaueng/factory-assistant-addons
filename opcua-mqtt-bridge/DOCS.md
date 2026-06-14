@@ -6,7 +6,7 @@ Factory Assistant is based on Home Assistant.
 > publishes to MQTT. It performs no OPC UA writes and provides no
 > machine-control path. Configuring it for control is out of scope and
 > structurally impossible. See the Factory Assistant safety boundary:
-> [`docs/SAFETY_BOUNDARY.md`](https://github.com/esaueng/factory-assistant/blob/main/docs/SAFETY_BOUNDARY.md).
+> [`docs/SAFETY_BOUNDARY.md`](https://github.com/esaueng/FactoryAssistantOS/blob/main/docs/SAFETY_BOUNDARY.md).
 
 ## How it works
 
@@ -14,7 +14,9 @@ The Supervisor renders your **Configuration** into `/data/options.json`. The
 Python entrypoint (`bridge.py`, using `asyncua` + `paho-mqtt`) connects to the
 OPC UA endpoint as a read-only client, reads each node on `publish_interval`,
 and publishes to MQTT. A startup self-check (`assert_read_only`) refuses to
-start if any OPC UA write call name is ever found in the source.
+start if any OPC UA write call name is ever found in the source. The
+`opcua.write_nodes_allowed` option is fixed to `false`; setting it to any other
+value is a startup error.
 
 ## Options
 
@@ -26,6 +28,7 @@ start if any OPC UA write call name is ever found in the source.
 | `opcua.username` | str | `""` | Optional. |
 | `opcua.password` | password | `""` | Optional. |
 | `opcua.publish_interval` | float | `5.0` | Seconds between read cycles (0.5–3600). |
+| `opcua.write_nodes_allowed` | bool | `false` | Must remain false. Any other value refuses startup. |
 | `mqtt.host` | str | `core-mosquitto` | Mosquitto add-on service name. |
 | `mqtt.port` | port | `1883` | |
 | `mqtt.username` / `mqtt.password` | str / password | `""` | Optional broker auth. |
@@ -68,6 +71,7 @@ opcua:
   endpoint: "opc.tcp://plc.example.local:4840"
   security: "None"
   publish_interval: 5.0
+  write_nodes_allowed: false
 mqtt:
   host: "core-mosquitto"
   port: 1883

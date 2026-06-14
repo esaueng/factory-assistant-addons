@@ -97,6 +97,16 @@ def assert_read_only(source_path: str | None = None) -> None:
         raise RuntimeError("Read-only guard marker missing.")
 
 
+def validate_read_only_options(options: dict[str, Any]) -> None:
+    """Refuse to start if configuration attempts to enable OPC UA writes."""
+    opcua_cfg = options.get("opcua", {})
+    if opcua_cfg.get("write_nodes_allowed") is not False:
+        raise RuntimeError(
+            "Safety boundary violation: opcua.write_nodes_allowed must be "
+            "false. OPC UA writes are prohibited."
+        )
+
+
 class MqttPublisher:
     """Thin paho-mqtt wrapper that only ever publishes (never subscribes to
     command topics)."""
@@ -198,6 +208,7 @@ class MqttPublisher:
 
 
 async def run(options: dict[str, Any]) -> None:
+    validate_read_only_options(options)
     opcua_cfg = options["opcua"]
     mqtt_cfg = options["mqtt"]
     site = options.get("site", "plant1")

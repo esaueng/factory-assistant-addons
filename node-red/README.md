@@ -17,7 +17,7 @@ Factory Assistant is based on Home Assistant.
 > is a monitoring system, not a safety device. This add-on ships **disabled at
 > boot**, with **no host network** and **no hardware access**, so it cannot
 > reach machine I/O out of the box. See the project safety boundary:
-> [`docs/SAFETY_BOUNDARY.md`](https://github.com/esaueng/factory-assistant/blob/main/docs/SAFETY_BOUNDARY.md).
+> [`docs/SAFETY_BOUNDARY.md`](https://github.com/esaueng/FactoryAssistantOS/blob/main/docs/SAFETY_BOUNDARY.md).
 
 ## What it is for
 

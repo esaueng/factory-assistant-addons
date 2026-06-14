@@ -5,7 +5,7 @@ Factory Assistant is based on Home Assistant.
 > ⚠️ **Read-only posture on this appliance.** Node-RED may read and transform
 > telemetry only. It must not be wired to control machines or implement any
 > safety function. See the Factory Assistant safety boundary:
-> [`docs/SAFETY_BOUNDARY.md`](https://github.com/esaueng/factory-assistant/blob/main/docs/SAFETY_BOUNDARY.md).
+> [`docs/SAFETY_BOUNDARY.md`](https://github.com/esaueng/FactoryAssistantOS/blob/main/docs/SAFETY_BOUNDARY.md).
 
 ## What this add-on is
 

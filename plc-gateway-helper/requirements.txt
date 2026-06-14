@@ -1,0 +1,4 @@
+# Factory Assistant — PLC Gateway Helper runtime dependencies (READ-ONLY).
+# Pinned for reproducible add-on builds.
+paho-mqtt==1.6.1
+pymodbus==3.7.4

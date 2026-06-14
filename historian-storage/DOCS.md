@@ -1,16 +1,17 @@
-# Historian — configuration
+# Historian Storage — configuration
 
 Factory Assistant is based on Home Assistant.
 
 > ⚠️ **Monitoring/archival only.** Reads MQTT telemetry, writes to a time-series
 > database. No machine-control path. See the Factory Assistant safety boundary:
-> [`docs/SAFETY_BOUNDARY.md`](https://github.com/esaueng/factory-assistant/blob/main/docs/SAFETY_BOUNDARY.md).
+> [`docs/SAFETY_BOUNDARY.md`](https://github.com/esaueng/FactoryAssistantOS/blob/main/docs/SAFETY_BOUNDARY.md).
 
 ## Options
 
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `log_level` | enum | `info` | `trace…fatal`. |
+| `cloud_export_enabled` | bool | `false` | Documents explicit operator approval for non-local/cloud analytics targets. Off by default. |
 | `source.mqtt_host` | str | `core-mosquitto` | Mosquitto add-on service name. |
 | `source.mqtt_port` | port | `1883` | |
 | `source.mqtt_username` / `source.mqtt_password` | str / password | `""` | Optional broker auth. |
@@ -67,6 +68,9 @@ bundled exporter. Telegraf is MIT-licensed.
 
 - **Implemented:** MQTT subscribe → InfluxDB 2.x line-protocol write, numeric
   values, topic-derived tags. This is a thin exporter, not a clustered pipeline.
+- **Default posture:** cloud/export analytics are disabled by default through
+  `cloud_export_enabled: false`; use local on-box storage unless the operator
+  deliberately approves an external telemetry store.
 - **Documented (not bundled):** the Telegraf deployment above, and TimescaleDB
   output. `tsdb.type: timescaledb` is accepted by the schema but the bundled
   exporter implements InfluxDB only; it logs an error and exits if selected, so
