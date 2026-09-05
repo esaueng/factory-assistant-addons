@@ -58,13 +58,25 @@ bash tests/test_catalog_alignment.sh
 bash tests/test_image_publish_workflow.sh
 ```
 
+Availability regression tests use the pinned add-on dependencies and a local
+Mosquitto broker. In a virtual environment, run:
+
+```sh
+python3 -m pip install -r opcua-mqtt-bridge/requirements.txt -r plc-gateway-helper/requirements.txt
+python3 -m unittest discover -s tests -p 'test_*.py' -v
+```
+
+Install `mosquitto` or set `MOSQUITTO_BIN` to its executable to include the
+localhost broker tests; they are skipped when it is absent. CI installs it and
+runs both the unit tests and real MQTT process-exit/reconnect tests.
+
 ## Topic and naming conventions
 
 Add-ons that publish to MQTT use the Factory Assistant topic convention:
 
 ```
 fa/<site>/<area>/<device>/<measurement>      telemetry
-fa/<site>/<area>/<device>/status             per-device availability (LWT)
+fa/<site>/<area>/<device>/status             per-device availability
 ```
 
 and emit Home Assistant MQTT discovery so entities are created automatically.

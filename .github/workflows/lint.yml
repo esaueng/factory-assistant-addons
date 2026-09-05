@@ -32,3 +32,17 @@ jobs:
             opcua-mqtt-bridge/bridge.py \
             plc-gateway-helper/gateway_helper.py \
             historian-storage/exporter.py
+
+      - name: Set up Python for availability tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install availability test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mosquitto
+          python -m pip install -r opcua-mqtt-bridge/requirements.txt -r plc-gateway-helper/requirements.txt
+
+      - name: Test telemetry availability
+        run: python -m unittest discover -s tests -p 'test_*.py' -v

@@ -22,6 +22,7 @@ import os
 import signal
 import struct
 import sys
+import threading
 import time
 from typing import Any
 
@@ -78,20 +79,47 @@ def validate_read_only_options(options: dict[str, Any]) -> None:
 class MqttPublisher:
     """Publish telemetry and discovery; never subscribes to command topics."""
 
-    def __init__(self, cfg: dict[str, Any], site: str) -> None:
+    def __init__(
+        self, cfg: dict[str, Any], site: str, registers: list[dict[str, Any]]
+    ) -> None:
         self._cfg = cfg
         self._site = site
         self._base = cfg.get("base_topic", "fa").strip("/")
         self._discovery = bool(cfg.get("discovery", True))
         self._discovery_prefix = cfg.get("discovery_prefix", "homeassistant")
+        self._lock = threading.Lock()
+        self._connected = False
+        self._availability: dict[str, dict[str, bool]] = {}
+        for register in registers:
+            self._availability.setdefault(self.status_topic(register), {})[
+                self.state_topic(register)
+            ] = False
         self._client = mqtt.Client(
             client_id=f"fa-plc-gateway-{site}",
             protocol=mqtt.MQTTv311,
         )
+        self._client.on_connect = self._on_connect
+        self._client.on_disconnect = self._on_disconnect
         if cfg.get("username"):
             self._client.username_pw_set(cfg["username"], cfg.get("password") or None)
         self._status_topic = f"{self._base}/{site}/_plc_gateway/status"
         self._client.will_set(self._status_topic, payload="offline", qos=1, retain=True)
+
+    def _on_connect(self, client: Any, userdata: Any, flags: Any, rc: int) -> None:
+        if rc != 0:
+            return
+        with self._lock:
+            self._connected = True
+            # A new MQTT session requires fresh reads, not retained device health.
+            for topic, measurements in self._availability.items():
+                for measurement in measurements:
+                    measurements[measurement] = False
+                client.publish(topic, payload="offline", qos=0, retain=True)
+            client.publish(self._status_topic, payload="online", qos=0, retain=True)
+
+    def _on_disconnect(self, client: Any, userdata: Any, rc: int) -> None:
+        with self._lock:
+            self._connected = False
 
     def connect(self) -> None:
         host = self._cfg.get("host", "core-mosquitto")
@@ -99,15 +127,23 @@ class MqttPublisher:
         LOG.info("Connecting to MQTT broker %s:%s", host, port)
         self._client.connect(host, port, keepalive=60)
         self._client.loop_start()
-        self._client.publish(self._status_topic, payload="online", qos=1, retain=True)
 
     def disconnect(self) -> None:
         try:
-            self._client.publish(self._status_topic, payload="offline", qos=1, retain=True)
-            self._client.loop_stop()
-            self._client.disconnect()
+            with self._lock:
+                info = None
+                if self._connected:
+                    info = self._client.publish(
+                        self._status_topic, payload="offline", qos=1, retain=True
+                    )
+                self._connected = False
+            if info is not None:
+                info.wait_for_publish(timeout=2.0)
         except Exception:  # noqa: BLE001 - best-effort shutdown
             pass
+        finally:
+            self._client.disconnect()
+            self._client.loop_stop()
 
     def device_topic(self, register: dict[str, Any]) -> str:
         return f"{self._base}/{self._site}/{register['area']}/{register['device']}"
@@ -118,14 +154,29 @@ class MqttPublisher:
     def status_topic(self, register: dict[str, Any]) -> str:
         return f"{self.device_topic(register)}/status"
 
+    def _publish_status(self, register: dict[str, Any], available: bool) -> None:
+        topic = self.status_topic(register)
+        measurements = self._availability[topic]
+        measurements[self.state_topic(register)] = available
+        # QoS 0 prevents replay of old online status after MQTT reconnect.
+        self._client.publish(
+            topic, payload="online" if all(measurements.values()) else "offline",
+            qos=0, retain=True,
+        )
+
     def publish_value(self, register: dict[str, Any], value: Any) -> None:
-        topic = self.state_topic(register)
-        payload = "" if value is None else str(value)
-        self._client.publish(topic, payload=payload, qos=1, retain=False)
-        self._client.publish(self.status_topic(register), payload="online", qos=1, retain=True)
+        with self._lock:
+            if not self._connected:
+                return
+            topic = self.state_topic(register)
+            payload = "" if value is None else str(value)
+            self._client.publish(topic, payload=payload, qos=1, retain=False)
+            self._publish_status(register, True)
 
     def publish_unavailable(self, register: dict[str, Any]) -> None:
-        self._client.publish(self.status_topic(register), payload="offline", qos=1, retain=True)
+        with self._lock:
+            if self._connected:
+                self._publish_status(register, False)
 
     def publish_discovery(self, register: dict[str, Any]) -> None:
         if not self._discovery:
@@ -137,7 +188,11 @@ class MqttPublisher:
             "unique_id": object_id,
             "object_id": object_id,
             "state_topic": self.state_topic(register),
-            "availability_topic": self.status_topic(register),
+            "availability": [
+                {"topic": self._status_topic},
+                {"topic": self.status_topic(register)},
+            ],
+            "availability_mode": "all",
             "payload_available": "online",
             "payload_not_available": "offline",
             "qos": 1,
@@ -222,7 +277,7 @@ def run(options: dict[str, Any]) -> None:
     signal.signal(signal.SIGTERM, _request_stop)
     signal.signal(signal.SIGINT, _request_stop)
 
-    publisher = MqttPublisher(options["mqtt"], site)
+    publisher = MqttPublisher(options["mqtt"], site, registers)
     publisher.connect()
     for register in registers:
         publisher.publish_discovery(register)
@@ -239,22 +294,33 @@ def run(options: dict[str, Any]) -> None:
         len(registers),
         interval,
     )
-    while not stop:
-        if not client.connected and not client.connect():
-            LOG.warning("Modbus connect to %s:%s failed.", modbus["host"], modbus.get("port", 502))
-            time.sleep(min(interval, 5.0))
-            continue
-        for register in registers:
+    try:
+        while not stop:
             try:
-                value = read_register(client, unit_id, register)
-                publisher.publish_value(register, value)
+                connected = client.connected or client.connect()
             except Exception as exc:  # noqa: BLE001
-                LOG.warning("Read failed for %s: %s", register.get("measurement"), exc)
-                publisher.publish_unavailable(register)
-        time.sleep(interval)
-
-    client.close()
-    publisher.disconnect()
+                LOG.warning("Modbus connect failed: %s", exc)
+                connected = False
+            if not connected:
+                LOG.warning(
+                    "Modbus connect to %s:%s failed.",
+                    modbus["host"], modbus.get("port", 502),
+                )
+                for register in registers:
+                    publisher.publish_unavailable(register)
+                time.sleep(min(interval, 5.0))
+                continue
+            for register in registers:
+                try:
+                    value = read_register(client, unit_id, register)
+                    publisher.publish_value(register, value)
+                except Exception as exc:  # noqa: BLE001
+                    LOG.warning("Read failed for %s: %s", register.get("measurement"), exc)
+                    publisher.publish_unavailable(register)
+            time.sleep(interval)
+    finally:
+        client.close()
+        publisher.disconnect()
 
 
 def main() -> int:
