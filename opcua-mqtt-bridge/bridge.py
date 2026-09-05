@@ -33,6 +33,7 @@ import logging
 import os
 import signal
 import sys
+import threading
 from typing import Any
 
 import paho.mqtt.client as mqtt
@@ -111,16 +112,27 @@ class MqttPublisher:
     """Thin paho-mqtt wrapper that only ever publishes (never subscribes to
     command topics)."""
 
-    def __init__(self, cfg: dict[str, Any], site: str) -> None:
+    def __init__(
+        self, cfg: dict[str, Any], site: str, nodes: list[dict[str, Any]]
+    ) -> None:
         self._cfg = cfg
         self._site = site
         self._base = cfg.get("base_topic", "fa").strip("/")
         self._discovery = bool(cfg.get("discovery", True))
         self._discovery_prefix = cfg.get("discovery_prefix", "homeassistant")
+        self._lock = threading.Lock()
+        self._connected = False
+        self._availability: dict[str, dict[str, bool]] = {}
+        for node in nodes:
+            self._availability.setdefault(self.status_topic(node), {})[
+                self.state_topic(node)
+            ] = False
         self._client = mqtt.Client(
             client_id=f"fa-opcua-bridge-{site}",
             protocol=mqtt.MQTTv311,
         )
+        self._client.on_connect = self._on_connect
+        self._client.on_disconnect = self._on_disconnect
         if cfg.get("username"):
             self._client.username_pw_set(cfg["username"], cfg.get("password") or None)
         # Last Will: mark the bridge offline if it disconnects ungracefully.
@@ -129,25 +141,45 @@ class MqttPublisher:
             self._bridge_status_topic, payload="offline", qos=1, retain=True
         )
 
+    def _on_connect(self, client: Any, userdata: Any, flags: Any, rc: int) -> None:
+        if rc != 0:
+            return
+        with self._lock:
+            self._connected = True
+            # A new MQTT session requires fresh reads, not retained device health.
+            for topic, measurements in self._availability.items():
+                for measurement in measurements:
+                    measurements[measurement] = False
+                client.publish(topic, payload="offline", qos=0, retain=True)
+            client.publish(self._bridge_status_topic, payload="online", qos=0, retain=True)
+
+    def _on_disconnect(self, client: Any, userdata: Any, rc: int) -> None:
+        with self._lock:
+            self._connected = False
+
     def connect(self) -> None:
         host = self._cfg.get("host", "core-mosquitto")
         port = int(self._cfg.get("port", 1883))
         LOG.info("Connecting to MQTT broker %s:%s", host, port)
         self._client.connect(host, port, keepalive=60)
         self._client.loop_start()
-        self._client.publish(
-            self._bridge_status_topic, payload="online", qos=1, retain=True
-        )
 
     def disconnect(self) -> None:
         try:
-            self._client.publish(
-                self._bridge_status_topic, payload="offline", qos=1, retain=True
-            )
-            self._client.loop_stop()
-            self._client.disconnect()
+            with self._lock:
+                info = None
+                if self._connected:
+                    info = self._client.publish(
+                        self._bridge_status_topic, payload="offline", qos=1, retain=True
+                    )
+                self._connected = False
+            if info is not None:
+                info.wait_for_publish(timeout=2.0)
         except Exception:  # noqa: BLE001 - best-effort shutdown
             pass
+        finally:
+            self._client.disconnect()
+            self._client.loop_stop()
 
     def device_topic(self, node: dict[str, Any]) -> str:
         return f"{self._base}/{self._site}/{node['area']}/{node['device']}"
@@ -158,21 +190,29 @@ class MqttPublisher:
     def status_topic(self, node: dict[str, Any]) -> str:
         return f"{self.device_topic(node)}/status"
 
-    def publish_value(self, node: dict[str, Any], value: Any) -> None:
-        topic = self.state_topic(node)
-        payload = "" if value is None else str(value)
-        LOG.debug("PUBLISH %s = %s", topic, payload)
-        self._client.publish(topic, payload=payload, qos=1, retain=False)
-        # Mark device available whenever we have fresh data.
+    def _publish_status(self, node: dict[str, Any], available: bool) -> None:
+        topic = self.status_topic(node)
+        measurements = self._availability[topic]
+        measurements[self.state_topic(node)] = available
+        # QoS 0 prevents replay of old online status after MQTT reconnect.
         self._client.publish(
-            self.status_topic(node), payload="online", qos=1, retain=True
+            topic, payload="online" if all(measurements.values()) else "offline",
+            qos=0, retain=True,
         )
 
+    def publish_value(self, node: dict[str, Any], value: Any) -> None:
+        with self._lock:
+            if not self._connected:
+                return
+            topic = self.state_topic(node)
+            payload = "" if value is None else str(value)
+            self._client.publish(topic, payload=payload, qos=1, retain=False)
+            self._publish_status(node, True)
+
     def publish_unavailable(self, node: dict[str, Any]) -> None:
-        """Mark a device offline (e.g. when an OPC UA read fails)."""
-        self._client.publish(
-            self.status_topic(node), payload="offline", qos=1, retain=True
-        )
+        with self._lock:
+            if self._connected:
+                self._publish_status(node, False)
 
     def publish_discovery(self, node: dict[str, Any]) -> None:
         if not self._discovery:
@@ -188,7 +228,11 @@ class MqttPublisher:
             "unique_id": object_id,
             "object_id": object_id,
             "state_topic": self.state_topic(node),
-            "availability_topic": self.status_topic(node),
+            "availability": [
+                {"topic": self._bridge_status_topic},
+                {"topic": self.status_topic(node)},
+            ],
+            "availability_mode": "all",
             "payload_available": "online",
             "payload_not_available": "offline",
             "qos": 1,
@@ -218,7 +262,7 @@ async def run(options: dict[str, Any]) -> None:
     if not nodes:
         LOG.warning("No nodes configured; nothing to bridge. Exiting idle.")
 
-    publisher = MqttPublisher(mqtt_cfg, site)
+    publisher = MqttPublisher(mqtt_cfg, site, nodes)
     publisher.connect()
     for node in nodes:
         publisher.publish_discovery(node)
@@ -243,38 +287,39 @@ async def run(options: dict[str, Any]) -> None:
         loop.add_signal_handler(sig, _request_stop)
 
     LOG.info("Connecting (READ-ONLY) to OPC UA endpoint %s", endpoint)
-    async with client:
-        # Resolve nodes once. We only ever read their values below.
-        resolved = []
-        for node in nodes:
-            try:
-                ua_node = client.get_node(node["node_id"])
-                resolved.append((node, ua_node))
-            except Exception as exc:  # noqa: BLE001
-                LOG.error("Cannot resolve node %s: %s", node["node_id"], exc)
-
-        LOG.info(
-            "Bridging %d node(s) every %.1fs (subscribe/read only).",
-            len(resolved),
-            interval,
-        )
-        while not stop.is_set():
-            for node, ua_node in resolved:
+    try:
+        async with client:
+            # Resolve nodes once. We only ever read their values below.
+            resolved = []
+            for node in nodes:
                 try:
-                    # READ ONLY: get_value() performs an OPC UA Read service.
-                    value = await ua_node.get_value()
-                    publisher.publish_value(node, value)
-                except (ua.UaError, OSError) as exc:
-                    LOG.warning(
-                        "Read failed for %s: %s", node["node_id"], exc
-                    )
-                    publisher.publish_unavailable(node)
-            try:
-                await asyncio.wait_for(stop.wait(), timeout=interval)
-            except asyncio.TimeoutError:
-                pass
+                    ua_node = client.get_node(node["node_id"])
+                    resolved.append((node, ua_node))
+                except Exception as exc:  # noqa: BLE001
+                    LOG.error("Cannot resolve node %s: %s", node["node_id"], exc)
 
-    publisher.disconnect()
+            LOG.info(
+                "Bridging %d node(s) every %.1fs (subscribe/read only).",
+                len(resolved),
+                interval,
+            )
+            while not stop.is_set():
+                for node, ua_node in resolved:
+                    try:
+                        # READ ONLY: get_value() performs an OPC UA Read service.
+                        value = await ua_node.get_value()
+                        publisher.publish_value(node, value)
+                    except (ua.UaError, OSError) as exc:
+                        LOG.warning(
+                            "Read failed for %s: %s", node["node_id"], exc
+                        )
+                        publisher.publish_unavailable(node)
+                try:
+                    await asyncio.wait_for(stop.wait(), timeout=interval)
+                except asyncio.TimeoutError:
+                    pass
+    finally:
+        publisher.disconnect()
     LOG.info("Bridge stopped.")
 
 

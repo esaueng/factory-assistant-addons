@@ -63,6 +63,24 @@ Discovery (when enabled) is published retained to
 `sensor.<area>_<device>_<measurement>` — matching the Factory Assistant naming
 convention used by the shipped dashboards.
 
+Discovery requires both the bridge liveness topic and the device status topic
+using `availability_mode: all`. A device is online only after every configured
+measurement for that device has a successful read. Any failed measurement makes
+all sensors on that device unavailable until it recovers. Other devices are
+independent. MQTT reconnects reset device status to offline until fresh reads
+arrive; abrupt bridge loss is reported through its retained Last Will.
+
+Device availability and bridge-online messages are retained at QoS 0. They are
+republished on every read/reconnect rather than queued for acknowledgement, so
+an old unacknowledged `online` cannot replay after reconnect. Last Will and
+graceful bridge-offline messages remain QoS 1. Telemetry remains QoS 1
+(at-least-once delivery, which can retransmit values); retransmitted values do
+not count as fresh reads or restore device availability.
+
+Existing telemetry topics, device status topics, discovery topics, and entity
+identifiers are unchanged. Restarting the updated add-on republishes discovery
+with the additional bridge availability requirement.
+
 ## Example configuration
 
 ```yaml
